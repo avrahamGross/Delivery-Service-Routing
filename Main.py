@@ -8,6 +8,7 @@ import gc
 
 # Name: Avraham Gross
 # Student ID: 009965073
+
 # Read Delivery Location file, parse data to individual locations with all associated locations and distance
 filename = input('PLease input delivery location file path: ')
 if filename == "":
@@ -31,21 +32,13 @@ for i in range(len(rows)):
     current_location_name = rows[i][1].split('\n')[0].lstrip()
     delivery_location_distance_list = []
     for j in range(2, len(rows) + 2):  # In order to properly parse correct location distance data,
-        if i <= j - 2:  # change from iterating through row to iterating through column
+        if i <= j - 2:                 # change from iterating through row to iterating through column
             for k in range(i, len(rows)):
-                location_distance = []
-                temp_location_name = rows[k][1].split('\n')
-                location_distance.append(temp_location_name[0].lstrip())
-                location_distance.append(rows[k][j])
-                next_delivery_location = DeliveryLocation(location_distance[0], float(location_distance[1]))
+                next_delivery_location = DeliveryLocation(rows[k][1].split('\n')[0].lstrip(), float(rows[k][j]))    # Create Delivery location with name and distance of location
                 delivery_location_distance_list.append(next_delivery_location)
             break
-        else:  # Continue iterating through row until reaching column of current_location_name distance
-            location_distance = []
-            temp_location_name = rows[j - 2][1].split('\n')
-            location_distance.append((temp_location_name[0].lstrip()))
-            location_distance.append(rows[i][j])
-            next_delivery_location = DeliveryLocation(location_distance[0], float(location_distance[1]))
+        else:  # Continue iterating through row until reaching column of current_location_name's distance
+            next_delivery_location = DeliveryLocation(rows[j - 2][1].split('\n')[0].lstrip(), float(rows[i][j]))     # Create Delivery location with name and distance of location
             delivery_location_distance_list.append(next_delivery_location)
     # Sort location distance data from closest to furthest, create Delivery Location object with current location,
     # associated distances, and add to location map
@@ -63,7 +56,7 @@ if filename == '':
     filename = 'C:\\Users\Avramie\Downloads\WGUPS Package File.csv'
 open_csv = open(filename)  # Input correct file path here
 for i in range(11):  # Skip lines in file that do not contain package data
-    lines = open_csv.readline()
+    rows = open_csv.readline()
 rows = open_csv.readlines()
 delivery_deadlines = set()
 package_map_by_location = ChainingHashTable(delivery_location_distance_list_length)
@@ -72,8 +65,8 @@ for i in rows:
     rows = i.split(',')
     note = rows[7] + rows[8]
     package = Package(int(rows[0]), rows[1], rows[2], rows[3], int(rows[4]), rows[5], int(rows[6]), note)
-    package_map_by_location.insert(package.address, package)
-    package_map_by_id.insert(package.id - 1, package)
+    package_map_by_location.insert(package.address, package)    # Insert package into package map using address as key
+    package_map_by_id.insert(package.id - 1, package)      # Insert package into package map using id as key
     delivery_deadlines.add(rows[5])
 open_csv.close()
 delivery_deadlines = list(delivery_deadlines)
@@ -89,7 +82,7 @@ truck_list = [truck1, truck2, truck3]
 previous_address = 'HUB'
 locations = location_map.search(previous_address, 'location_list', 'name')  # Get location_list of distances from HUB
 same_truck = set()
-same_truck_num = None
+same_truck_item = None
 for location in locations:  # Retrieve packages in list based on location
     packages = package_map_by_location.search(location.name)
     if packages is not None:
@@ -98,7 +91,7 @@ for location in locations:  # Retrieve packages in list based on location
         for package in packages:
             success = False  # Track if package was successfully added to a truck
             if package.id in same_truck:  # If a package must be delivered with other packages, but does not have a note i.e. package 19
-                same_truck_num.add_to_package_list(package)
+                same_truck_item.add_to_package_list(package)
             elif package.delivery_deadline != delivery_deadlines[
                 0] and package.notes == '':  # If there is a delivery deadline and no notes
                 success = truck1.add_to_package_list(package)
@@ -146,12 +139,12 @@ for location in locations:  # Retrieve packages in list based on location
                     for truck in truck_list:  # Check if one of the associated packages is already set to a truck
                         if same_truck.intersection(truck.package_list):
                             success = truck.add_to_package_list(package)
-                            same_truck_num = truck
+                            same_truck_item = truck
                             flag = True
                             break
                     if not flag:  # If not, set to truck 1
                         success = truck1.add_to_package_list(package)
-                        same_truck_num = truck1
+                        same_truck_item = truck1
             elif not success:  # If a package has no note or delivery deadline, put on truck with the fewest packages.
                 count = 16
                 best_truck_index = -1
@@ -163,12 +156,13 @@ for location in locations:  # Retrieve packages in list based on location
         previous_address = package.address
 
 total_miles = 0
+user_input_int = []
 user_input = input(
     'Please input a time (24hr format 23:59): ')  # Take user input to search specific package information
 if user_input != '':
     user_input = user_input.split(':')
     for i in range(len(user_input)):
-        user_input[i] = int(user_input[i])
+        user_input_int.append(int(user_input[i]))
 total_list = []
 for truck in truck_list:  # Map route for each truck
     total_miles, total_list = truck.map_route(package_map_by_location, total_miles, location_map, total_list)
@@ -185,26 +179,26 @@ truck1_distance = 0
 truck2_distance = 0
 truck3_distance = 0
 truck_distance_list = [truck1_distance, truck2_distance, truck3_distance]
-if user_input != '':
+if user_input != '':   # If user input time, print status update at that specified time
     for item in total_list:
         hour = item[1]
         if item[3] == 'PM' and item[1] > 12:
             hour = item[1] - 12
-        if (item[1] == user_input[0] and item[2] <= 45) or item[1] < user_input[0]:
+        if (item[1] == user_input_int[0] and item[2] <= 45) or item[1] < user_input_int[0]:
             item[0].status = 'delivered at %.f:%02.f %s' % (
             hour, item[2], item[3])  # Mark package as delivered if before or at time of status update
             truck_distance_list[item[4] - 1] += item[0].miles_to_deliver
-        elif truck.departure_hr < user_input[0] or (
-                truck.departure_hr == user_input[0] and truck.departure_min <= user_input[1]):
+        elif truck.departure_hr < user_input_int[0] or (
+                truck.departure_hr == user_input_int[0] and truck.departure_min <= user_input_int[1]):
             item[0].status = 'en route'  # Mark package 'en route' if truck left depot
 # Print total distance driven by each truck at time of status update, print status update
     print('\nTruck 1: %f\nTruck 2: %f\nTruck 3: %f \n' % (truck_distance_list[0], truck_distance_list[1], truck_distance_list[2]))
     meridian = 'AM'
-    if user_input[0] > 12:
-        user_input[0] = user_input[0] - 12
+    if user_input_int[0] > 12:
+        user_input_int[0] = user_input_int[0] - 12
         meridian = 'PM'
-    print('Status Update at %d:%d %s' % (user_input[0], user_input[1], meridian))
-else:
+    print('Status Update at %s:%s %s' % (user_input[0], user_input[1], meridian))
+else:     # If user did not specify time for status update, print update of final status after all trucks run route
     for item in total_list:
         hour = item[1]
         if item[3] == 'PM' and item[1] > 12:
