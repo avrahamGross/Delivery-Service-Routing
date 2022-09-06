@@ -167,11 +167,12 @@ total_list = []
 for truck in truck_list:  # Map route for each truck
     total_miles, total_list = truck.map_route(package_map_by_location, total_miles, location_map, total_list)
     # Set truck 3 departure time at truck 1 return time if later than
-    if (truck1.meridian == 'AM' and truck1.time_hr >= truck3.time_hr and truck1.time_min > truck3.time_min) or (
-            truck1.meridian == 'PM'):
-        truck3.time_hr, truck3.time_min, truck3.time = truck1.time_hr, truck1.time_min, truck1.time
-    else:
-        truck3.departure_hr, truck3.departure_min, truck3.time = 10, 20, '10:20 AM'
+    if truck.name == 1:
+        if (truck1.meridian == 'AM' and truck1.time_hr >= truck3.time_hr and truck1.time_min > truck3.time_min) or (
+                truck1.meridian == 'PM'):
+            truck3.time_hr, truck3.time_min, truck3.time = truck1.time_hr, truck1.time_min, truck1.time
+        else:
+            truck3.departure_hr, truck3.departure_min, truck3.time = 10, 20, '10:20 AM'
 
 # Run truck routes, print status update at input time
 total_list.sort(key=lambda x: (x[1], x[2]))
@@ -199,6 +200,7 @@ if user_input != '':   # If user input time, print status update at that specifi
         meridian = 'PM'
     print('Status Update at %s:%s %s' % (user_input[0], user_input[1], meridian))
 else:     # If user did not specify time for status update, print update of final status after all trucks run route
+    print('Current time: %s' % truck3.time)
     for item in total_list:
         hour = item[1]
         if item[3] == 'PM' and item[1] > 12:
