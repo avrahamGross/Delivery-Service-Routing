@@ -203,6 +203,6 @@ else:     # If user did not specify time for status update, print update of fina
         hour = item[1]
         if item[3] == 'PM' and item[1] > 12:
             hour = item[1] - 12
-            item[0].status = 'delivered at %.f:%02.f %s' % (hour, item[2], item[3])
+        item[0].status = 'delivered at %.f:%02.f %s' % (hour, item[2], item[3])
 package_map_by_id.print_all()
 print('\nTotal miles driven:', total_miles, '\n')
