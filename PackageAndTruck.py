@@ -1,7 +1,7 @@
 
 class Package:
 
-    def __init__(self, id, address, city, state, zip, delivery_deadline, weight, notes):
+    def __init__(self, id, address, city, state, zip, delivery_deadline, weight, notes, status):
         self.id = id
         self.address = address
         self.city = city
@@ -10,8 +10,9 @@ class Package:
         self.delivery_deadline = delivery_deadline
         self.weight = weight
         self.notes = notes
-        self.status = 'at the hub'
+        self.status = status
         self.miles_to_deliver = 0
+        self.truck_num = 0
 
     def print_all(self):
         print(self.id, self.address, self.delivery_deadline, self.notes,
@@ -50,6 +51,7 @@ class Truck:
             self.package_list_location.append(package.address)
             self.package_count += 1
             self.location = package.address
+            package.truck_num = self.name
             return True
         return False
 
