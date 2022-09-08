@@ -1,3 +1,6 @@
+# Name: Avraham Gross
+# Student ID: 009965073
+
 import sys
 from PackageAndTruck import Package, Truck
 from HashTable import LPHashTable, ChainingHashTable
@@ -5,9 +8,6 @@ from DeliveryLocation import DeliveryLocation
 import csv
 from operator import attrgetter
 import gc
-
-# Name: Avraham Gross
-# Student ID: 009965073
 
 # Read Delivery Location file, parse data to individual locations with all associated locations and distance
 filename = input('PLease input delivery location file path: ')
@@ -32,13 +32,15 @@ for i in range(len(rows)):
     current_location_name = rows[i][1].split('\n')[0].lstrip()
     delivery_location_distance_list = []
     for j in range(2, len(rows) + 2):  # In order to properly parse correct location distance data,
-        if i <= j - 2:                 # change from iterating through row to iterating through column
+        if i <= j - 2:  # change from iterating through row to iterating through column
             for k in range(i, len(rows)):
-                next_delivery_location = DeliveryLocation(rows[k][1].split('\n')[0].lstrip(), float(rows[k][j]))    # Create Delivery location with name and distance of location
+                next_delivery_location = DeliveryLocation(rows[k][1].split('\n')[0].lstrip(), float(
+                    rows[k][j]))  # Create Delivery location with name and distance of location
                 delivery_location_distance_list.append(next_delivery_location)
             break
         else:  # Continue iterating through row until reaching column of current_location_name's distance
-            next_delivery_location = DeliveryLocation(rows[j - 2][1].split('\n')[0].lstrip(), float(rows[i][j]))     # Create Delivery location with name and distance of location
+            next_delivery_location = DeliveryLocation(rows[j - 2][1].split('\n')[0].lstrip(), float(
+                rows[i][j]))  # Create Delivery location with name and distance of location
             delivery_location_distance_list.append(next_delivery_location)
     # Sort location distance data from closest to furthest, create Delivery Location object with current location,
     # associated distances, and add to location map
@@ -61,12 +63,22 @@ rows = open_csv.readlines()
 delivery_deadlines = set()
 package_map_by_location = ChainingHashTable(delivery_location_distance_list_length)
 package_map_by_id = LPHashTable(len(rows))
+delayed_packages = []
+delayed_packages_time = ()
 for i in rows:
     rows = i.split(',')
     note = rows[7] + rows[8]
-    package = Package(int(rows[0]), rows[1], rows[2], rows[3], int(rows[4]), rows[5], int(rows[6]), note)
-    package_map_by_location.insert(package.address, package)    # Insert package into package map using address as key
-    package_map_by_id.insert(package.id - 1, package)      # Insert package into package map using id as key
+    status = 'at the hub'
+    if note[0: 7] == 'Delayed':
+        status = 'delayed in transit'
+        package_note = note[-7: -3].split(':')
+        for index in range(len(package_note)):
+            package_note[index] = int(package_note[index])
+        delayed_packages_time = (package_note)
+        delayed_packages.append((int(rows[0])))
+    package = Package(int(rows[0]), rows[1], rows[2], rows[3], int(rows[4]), rows[5], int(rows[6]), note, status)
+    package_map_by_location.insert(package.address, package)  # Insert package into package map using address as key
+    package_map_by_id.insert(package.id - 1, package)  # Insert package into package map using id as key
     delivery_deadlines.add(rows[5])
 open_csv.close()
 delivery_deadlines = list(delivery_deadlines)
@@ -156,13 +168,6 @@ for location in locations:  # Retrieve packages in list based on location
         previous_address = package.address
 
 total_miles = 0
-user_input_int = []
-user_input = input(
-    'Please input a time (24hr format 23:59): ')  # Take user input to search specific package information
-if user_input != '':
-    user_input = user_input.split(':')
-    for i in range(len(user_input)):
-        user_input_int.append(int(user_input[i]))
 total_list = []
 for truck in truck_list:  # Map route for each truck
     total_miles, total_list = truck.map_route(package_map_by_location, total_miles, location_map, total_list)
@@ -174,32 +179,56 @@ for truck in truck_list:  # Map route for each truck
         else:
             truck3.departure_hr, truck3.departure_min, truck3.time = 10, 20, '10:20 AM'
 
+user_time_int = []
+user_package = input('Please input a package id: ')
+user_time = input(
+    'Please input a time (24hr format 23:59): ')  # Take user input to search specific package information
+if user_time != '':
+    user_time = user_time.split(':')
+    for i in range(len(user_time)):
+        user_time_int.append(int(user_time[i]))
 # Run truck routes, print status update at input time
 total_list.sort(key=lambda x: (x[1], x[2]))
 truck1_distance = 0
 truck2_distance = 0
 truck3_distance = 0
 truck_distance_list = [truck1_distance, truck2_distance, truck3_distance]
-if user_input != '':   # If user input time, print status update at that specified time
+delayed_packages_flag = False
+if user_time != '':  # If user input time, print status update at that specified time
+    meridian = 'AM'
     for item in total_list:
         hour = item[1]
         if item[3] == 'PM' and item[1] > 12:
             hour = item[1] - 12
-        if (item[1] == user_input_int[0] and item[2] <= 45) or item[1] < user_input_int[0]:
+        if not delayed_packages_flag:  # Set delayed packages to at the hub at or after time to be at the hub
+            if ((item[1] == delayed_packages_time[0] and item[2] >= delayed_packages_time[1]) or item[1] >
+                delayed_packages_time[0]) and (
+                    (delayed_packages_time[0] == user_time_int[0] and delayed_packages_time[1] <= user_time_int[1]) or
+                    delayed_packages_time[0] < user_time_int[0]):
+                for id in delayed_packages:
+                    item_by_id = package_map_by_id.search(id, None, 'id')
+                    item_by_id.status = 'at the hub'
+                delayed_packages_flag = True
+        if (item[1] == user_time_int[0] and item[2] <= user_time_int[1]) or item[1] < user_time_int[0]:
             item[0].status = 'delivered at %.f:%02.f %s' % (
-            hour, item[2], item[3])  # Mark package as delivered if before or at time of status update
+                hour, item[2], item[3])  # Mark package as delivered if before or at time of status update
             truck_distance_list[item[4] - 1] += item[0].miles_to_deliver
-        elif truck.departure_hr < user_input_int[0] or (
-                truck.departure_hr == user_input_int[0] and truck.departure_min <= user_input_int[1]):
+        elif truck_list[item[0].truck_num - 1].departure_hr < user_time_int[0] or (
+                truck_list[item[0].truck_num - 1].departure_hr == user_time_int[0] and truck_list[
+            item[0].truck_num - 1].departure_min <= user_time_int[1]):
             item[0].status = 'en route'  # Mark package 'en route' if truck left depot
-# Print total distance driven by each truck at time of status update, print status update
-    print('\nTruck 1: %f\nTruck 2: %f\nTruck 3: %f \n' % (truck_distance_list[0], truck_distance_list[1], truck_distance_list[2]))
-    meridian = 'AM'
-    if user_input_int[0] > 12:
-        user_input_int[0] = user_input_int[0] - 12
+        if user_package != '' and item[0].id == int(
+                user_package):  # Print user input package with status at user input time, if user package input is not blank
+            print('\nPackage id %d status at %s:%s %s: %s' % (
+            item[0].id, user_time[0], user_time[1], meridian, item[0].status))
+    # Print total distance driven by each truck at time of status update, print status update
+    print('\nTruck 1: %f\nTruck 2: %f\nTruck 3: %f \n' % (
+        truck_distance_list[0], truck_distance_list[1], truck_distance_list[2]))
+    if user_time_int[0] > 12:
+        user_time_int[0] = user_time_int[0] - 12
         meridian = 'PM'
-    print('Status Update at %s:%s %s' % (user_input[0], user_input[1], meridian))
-else:     # If user did not specify time for status update, print update of final status after all trucks run route
+    print('Status Update at %s:%s %s' % (user_time[0], user_time[1], meridian))
+else:  # If user did not specify time for status update, print update of final status after all trucks run route
     print('Current time: %s' % truck3.time)
     for item in total_list:
         hour = item[1]
