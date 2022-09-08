@@ -16,9 +16,6 @@ class LPHashTable:
         self.EMPTY_AFTER_REMOVAL = EmptyBucket()
         self.table = [self.EMPTY_FROM_BEGINNING] * size
 
-    # def __iter__(self):
-    #     yield from self.keys
-
     def insert(self, key, item):
         buckets_checked = 0
         bucket = hash(key) % len(self.table)
